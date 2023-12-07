@@ -1,100 +1,100 @@
 import { createContext, useContext, useState } from 'react'
-import {
-  BoardState,
-  Coordinate,
-  DEFAULT_BOARD_INITIAL_STATE,
-  PieceColor
-} from './constants'
-import { calculateValidMoves } from './helpers'
+import { cx } from '~/utils/styles'
+import { Chess, Color, Square } from 'chess.js'
 
 type ChessBoardContextType = {
-  boardState: BoardState
-  toMove: PieceColor
-  movePiece: (from: Coordinate, to: Coordinate) => void
-  selectedSquare: Coordinate | null
-  setSelectedSquare: (coordinate: Coordinate | null) => void
-  squaresWithValidMove: Coordinate[]
+  chess: Chess
+  toMove: Color
+  movePiece: (from: Square, to: Square) => void
+  selectedSquare: Square | null
+  setSelectedSquare: (coordinate: Square | null) => void
+  squaresWithValidMove: Square[]
+  lastMovedSquare: Square | null
 }
 
 const ChessBoardContext = createContext<ChessBoardContextType>({
-  boardState: DEFAULT_BOARD_INITIAL_STATE,
-  toMove: 'white',
+  chess: new Chess(),
+  toMove: 'w',
   movePiece: () => {},
   selectedSquare: null,
   setSelectedSquare: () => {},
-  squaresWithValidMove: []
+  squaresWithValidMove: [],
+  lastMovedSquare: null
 })
 
 export const useChessBoardContext = () => {
   return useContext(ChessBoardContext)
 }
 
-const getInitialBoardState = (boardStateSeed?: string): BoardState => {
-  if (boardStateSeed) {
-    // TODO: Generate board state from PGN string somehow
-    return DEFAULT_BOARD_INITIAL_STATE
+const getInitialChessboard = (pgnString?: string): Chess => {
+  const chess = new Chess()
+
+  if (pgnString) {
+    chess.loadPgn(pgnString)
   }
 
-  return DEFAULT_BOARD_INITIAL_STATE
+  return chess
 }
 
 type Props = {
-  // A PGN string See: https://www.chess.com/terms/chess-pgn
-  boardStateSeed?: string
+  //See: https://www.chess.com/terms/chess-pgn
+  pgnString?: string
   children?: React.ReactNode
 }
 
 export const ChessBoardContextProvider = ({
-  boardStateSeed,
+  pgnString = '',
   children
 }: Props) => {
-  const [boardState, setBoardState] = useState(() => {
-    return getInitialBoardState(boardStateSeed)
+  const [, setBooleanValue] = useState(false)
+  const forceRerender = () => setBooleanValue((prev) => !prev)
+  const [chess] = useState(() => {
+    return getInitialChessboard(pgnString)
   })
-  const [selectedSquare, setSelectedSquare] = useState<Coordinate | null>(null)
+  const [selectedSquare, setSelectedSquare] = useState<Square | null>(null)
+  let selectedPiece = null
 
-  const toMove = boardState.turnCount % 2 === 0 ? 'white' : 'black'
+  try {
+    selectedPiece = chess.get(selectedSquare!)
+  } catch {}
 
-  const squaresWithValidMove = (() => {
-    if (!selectedSquare) return []
+  const movePiece = (from: Square, to: Square) => {
+    if (chess.isGameOver()) return
 
-    return calculateValidMoves(boardState, selectedSquare)
-  })()
+    // Do move
+    chess.move({ from, to })
+    // Show toast if invalid move
+    // Check if game is over
 
-  const movePiece = (from: Coordinate, to: Coordinate) => {
-    const piece = boardState[from]
-
-    // Check if the move is valid
-    if (!piece) {
-      console.error(`No piece found at ${from}`)
-    }
-
-    // TODO: Do other checks
-
-    // Move the piece
-    setBoardState((prevBoardState) => {
-      const newBoardState = { ...prevBoardState }
-      newBoardState[to] = piece
-      newBoardState[from] = null
-
-      return newBoardState
-    })
+    forceRerender()
   }
 
-  console.log({ selectedSquare, squaresWithValidMove })
+  const squaresWithValidMove = selectedPiece
+    ? chess
+        .moves({
+          square: selectedSquare!,
+          verbose: true
+        })
+        .map((move) => move.to)
+    : []
 
   return (
     <ChessBoardContext.Provider
       value={{
-        boardState,
+        chess,
         movePiece,
-        toMove,
+        toMove: chess.turn(),
         selectedSquare,
         setSelectedSquare,
+        lastMovedSquare: chess.history({ verbose: true }).slice(-1)[0]?.to,
         squaresWithValidMove
       }}
     >
       {children}
+
+      <div className={cx('border border-gray-500 bg-gray-200')}>
+        <pre>{chess.pgn()}</pre>
+      </div>
     </ChessBoardContext.Provider>
   )
 }

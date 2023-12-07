@@ -1,7 +1,8 @@
 import { cx } from '~/utils/styles'
-import { Square } from './Square'
-import { COLUMNS, Coordinate, ROWS } from './constants'
+import { COLUMNS, ROWS } from './constants'
 import { useState } from 'react'
+import { Square as Coordinate } from 'chess.js'
+import { Square } from './Square'
 
 export const Board = () => {
   const [isBoardFlipped, setIsBoardFlipped] = useState(false)
@@ -9,7 +10,7 @@ export const Board = () => {
   return (
     <div>
       <div
-        className={cx('w-full flex', {
+        className={cx('w-full flex', 'rounded-lg border border-lime-700', {
           'flex-col-reverse': !isBoardFlipped, // White is at bottom
           'flex-col': isBoardFlipped
         })}
@@ -19,7 +20,13 @@ export const Board = () => {
             {COLUMNS.map((column) => {
               const coordinate = `${column}${row}` as Coordinate
 
-              return <Square key={coordinate} coordinate={coordinate} />
+              return (
+                <Square
+                  key={coordinate}
+                  coordinate={coordinate}
+                  isBoardFlipped={isBoardFlipped}
+                />
+              )
             })}
           </div>
         ))}
