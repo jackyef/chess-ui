@@ -28,7 +28,7 @@ export const Board = () => {
       <div className={cx('flex my-4 justify-end')}>
         <button
           className={cx(
-            'px-4 py-2 rounded-xl bg-gray-900 hover:bg-gray-800 text-white'
+            'px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-600 text-white'
           )}
           onClick={() => setIsBoardFlipped((prev) => !prev)}
         >

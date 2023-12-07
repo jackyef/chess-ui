@@ -13,10 +13,13 @@ export type BoardState = {
     piece: Piece
     color: PieceColor
   } | null
+} & {
+  // Number of turns elapsed. 0 means white to move.
+  turnCount: number
 }
 
 export const DEFAULT_BOARD_INITIAL_STATE = (() => {
-  const boardState = {} as BoardState
+  const boardState = { turnCount: 0 } as BoardState
 
   Object.values(ROWS).forEach((row) => {
     Object.values(COLUMNS).forEach((column) => {

@@ -1,18 +1,25 @@
-import React, { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useState } from 'react'
 import {
   BoardState,
   Coordinate,
-  DEFAULT_BOARD_INITIAL_STATE
+  DEFAULT_BOARD_INITIAL_STATE,
+  PieceColor
 } from './constants'
 
 type ChessBoardContextType = {
   boardState: BoardState
+  toMove: PieceColor
   movePiece: (from: Coordinate, to: Coordinate) => void
+  selectedSquare: Coordinate | null
+  setSelectedSquare: (coordinate: Coordinate | null) => void
 }
 
 const ChessBoardContext = createContext<ChessBoardContextType>({
   boardState: DEFAULT_BOARD_INITIAL_STATE,
-  movePiece: () => {}
+  toMove: 'white',
+  movePiece: () => {},
+  selectedSquare: null,
+  setSelectedSquare: () => {}
 })
 
 export const useChessBoardContext = () => {
@@ -41,6 +48,9 @@ export const ChessBoardContextProvider = ({
   const [boardState, setBoardState] = useState(() => {
     return getInitialBoardState(boardStateSeed)
   })
+  const [selectedSquare, setSelectedSquare] = useState<Coordinate | null>(null)
+
+  const toMove = boardState.turnCount % 2 === 0 ? 'white' : 'black'
 
   const movePiece = (from: Coordinate, to: Coordinate) => {
     const piece = boardState[from]
@@ -63,7 +73,15 @@ export const ChessBoardContextProvider = ({
   }
 
   return (
-    <ChessBoardContext.Provider value={{ boardState, movePiece }}>
+    <ChessBoardContext.Provider
+      value={{
+        boardState,
+        movePiece,
+        toMove,
+        selectedSquare,
+        setSelectedSquare
+      }}
+    >
       {children}
     </ChessBoardContext.Provider>
   )
