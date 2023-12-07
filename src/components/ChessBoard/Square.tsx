@@ -1,14 +1,19 @@
 import { cx } from '~/utils/styles'
 import { useChessBoardContext } from './context'
-import { Piece } from './Piece'
 import { Square as Coordinate } from 'chess.js'
+import { motion } from 'framer-motion'
 
 type Props = {
   coordinate: Coordinate
   isBoardFlipped: boolean
+  showAttackedSquare: boolean
 }
 
-export const Square = ({ coordinate, isBoardFlipped }: Props) => {
+export const Square = ({
+  coordinate,
+  isBoardFlipped,
+  showAttackedSquare
+}: Props) => {
   const {
     chess,
     toMove,
@@ -16,20 +21,68 @@ export const Square = ({ coordinate, isBoardFlipped }: Props) => {
     selectedSquare,
     movePiece,
     squaresWithValidMove,
-    lastMovedSquare
+    lastMove
   } = useChessBoardContext()
   const piece = chess.get(coordinate)
-  const isBlackSquare =
-    (coordinate[0].charCodeAt(0) + Number(coordinate[1])) % 2 === 0
+  const hasPiece = Boolean(piece)
+  const isBlackSquare = chess.squareColor(coordinate) === 'dark'
   const isSelectedSquare = selectedSquare === coordinate
   const isValidMovePosition = squaresWithValidMove.includes(coordinate)
-  const hasPiece = Boolean(piece)
-  const isLastMovedSquare = lastMovedSquare === coordinate
+  const isLastMovedSquare = lastMove?.to === coordinate
+  const isAttackedByWhite = showAttackedSquare
+    ? chess.isAttacked(coordinate, 'w')
+    : false
+  const isAttackedByBlack = showAttackedSquare
+    ? chess.isAttacked(coordinate, 'b')
+    : false
+
+  const attackedSquareIndicator = (() => {
+    if (isAttackedByWhite && isAttackedByBlack) {
+      return (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className={cx(
+            'absolute inset-0 pointer-events-none z-0',
+            isBlackSquare ? 'bg-violet-400' : 'bg-violet-200'
+          )}
+        />
+      )
+    }
+
+    if (isAttackedByWhite) {
+      return (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className={cx(
+            'absolute inset-0 pointer-events-none z-0',
+            isBlackSquare ? 'bg-red-400' : 'bg-red-200'
+          )}
+        />
+      )
+    }
+    if (isAttackedByBlack) {
+      return (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className={cx(
+            'absolute inset-0 pointer-events-none z-0',
+            isBlackSquare ? 'bg-blue-400' : 'bg-blue-200'
+          )}
+        />
+      )
+    }
+  })()
 
   return (
     <button
       className={cx(
-        'w-[12.5%] aspect-square relative',
+        'w-full aspect-square relative',
         isBlackSquare ? 'bg-lime-700 text-lime-50' : 'bg-lime-50 text-lime-800',
         toMove !== piece?.color &&
           !isValidMovePosition &&
@@ -75,6 +128,9 @@ export const Square = ({ coordinate, isBoardFlipped }: Props) => {
           )}
         />
       )}
+
+      {attackedSquareIndicator}
+
       {isValidMovePosition && (
         <div
           className={cx(
@@ -101,15 +157,6 @@ export const Square = ({ coordinate, isBoardFlipped }: Props) => {
       <div className={cx('absolute top-1 left-1 text-xs select-none')}>
         {coordinate}
       </div>
-      {hasPiece && (
-        <div
-          className={cx(
-            'absolute inset-0 flex items-center justify-center z-1'
-          )}
-        >
-          <Piece pieceType={piece.type} pieceColor={piece.color} />
-        </div>
-      )}
     </button>
   )
 }

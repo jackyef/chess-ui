@@ -40,8 +40,7 @@ export const Piece = ({ pieceType, pieceColor }: Props) => {
   return (
     <Image
       priority
-      className={cx('w-11/12 h-w-11/12')}
-      draggable
+      className={cx('block w-11/12 h-w-11/12 mt-1')}
       alt={`${pieceColor} ${pieceType}`}
       src={pieceImages[`${pieceColor}-${pieceType}`]}
     />

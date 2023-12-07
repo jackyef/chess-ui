@@ -1,6 +1,7 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import { cx } from '~/utils/styles'
-import { Chess, Color, Square } from 'chess.js'
+import { Chess, Color, Move, SQUARES, Square } from 'chess.js'
+import { PieceIdMap } from './constants'
 
 type ChessBoardContextType = {
   chess: Chess
@@ -9,7 +10,10 @@ type ChessBoardContextType = {
   selectedSquare: Square | null
   setSelectedSquare: (coordinate: Square | null) => void
   squaresWithValidMove: Square[]
-  lastMovedSquare: Square | null
+  lastMove: Move | null
+  turnCount: number
+  reset: () => void
+  pieceIdMap: PieceIdMap
 }
 
 const ChessBoardContext = createContext<ChessBoardContextType>({
@@ -19,7 +23,10 @@ const ChessBoardContext = createContext<ChessBoardContextType>({
   selectedSquare: null,
   setSelectedSquare: () => {},
   squaresWithValidMove: [],
-  lastMovedSquare: null
+  lastMove: null,
+  turnCount: 0,
+  reset: () => {},
+  pieceIdMap: {}
 })
 
 export const useChessBoardContext = () => {
@@ -48,11 +55,27 @@ export const ChessBoardContextProvider = ({
 }: Props) => {
   const [, setBooleanValue] = useState(false)
   const forceRerender = () => setBooleanValue((prev) => !prev)
-  const [chess] = useState(() => {
+  const [pieceIdMap, setPieceIdMap] = useState<PieceIdMap>({})
+  const [chess, setChess] = useState(() => {
     return getInitialChessboard(pgnString)
   })
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null)
   let selectedPiece = null
+
+  useEffect(() => {
+    // Construct initial pieceIdMap
+    SQUARES.forEach((square) => {
+      try {
+        const piece = chess.get(square)
+        if (piece) {
+          setPieceIdMap((prev) => ({
+            ...prev,
+            [square]: `${piece.color}_${piece.type}_${square}`
+          }))
+        }
+      } catch {}
+    })
+  }, [chess])
 
   try {
     selectedPiece = chess.get(selectedSquare!)
@@ -61,11 +84,43 @@ export const ChessBoardContextProvider = ({
   const movePiece = (from: Square, to: Square) => {
     if (chess.isGameOver()) return
 
+    let hasMovedSuccessfully = false
     // Do move
-    chess.move({ from, to })
-    // Show toast if invalid move
+    try {
+      chess.move({ from, to })
+      hasMovedSuccessfully = true
+    } catch {}
+
+    if (!hasMovedSuccessfully) {
+      // TODO: Show UI to pick promotion.
+      // For now just auto-promote to queen
+      try {
+        chess.move({ from, to, promotion: 'q' })
+        hasMovedSuccessfully = true
+      } catch {}
+    }
+
+    if (!hasMovedSuccessfully) {
+      // TODO: Show toast error
+      // Show toast if invalid move
+    }
+
+    // Update pieceIdMap
+    if (pieceIdMap[from]) {
+      setPieceIdMap((prev) => {
+        const newMap = { ...prev }
+        delete newMap[from]
+
+        return {
+          ...newMap,
+          [to]: prev[from]
+        }
+      })
+    }
+
     // Check if game is over
 
+    setSelectedSquare(null)
     forceRerender()
   }
 
@@ -77,6 +132,7 @@ export const ChessBoardContextProvider = ({
         })
         .map((move) => move.to)
     : []
+  const lastMove = chess.history({ verbose: true }).slice(-1)[0]
 
   return (
     <ChessBoardContext.Provider
@@ -86,14 +142,23 @@ export const ChessBoardContextProvider = ({
         toMove: chess.turn(),
         selectedSquare,
         setSelectedSquare,
-        lastMovedSquare: chess.history({ verbose: true }).slice(-1)[0]?.to,
-        squaresWithValidMove
+        lastMove,
+        turnCount: chess.history().length,
+        squaresWithValidMove,
+        reset: () => {
+          setChess(getInitialChessboard())
+          setSelectedSquare(null)
+          forceRerender()
+        },
+        pieceIdMap
       }}
     >
       {children}
 
-      <div className={cx('border border-gray-500 bg-gray-200')}>
-        <pre>{chess.pgn()}</pre>
+      <div className={cx('border border-gray-500 bg-gray-200 p-4 rounded-md')}>
+        <pre className={cx('break-words')}>
+          {chess.pgn({ maxWidth: 50, newline: '\n' })}
+        </pre>
       </div>
     </ChessBoardContext.Provider>
   )
