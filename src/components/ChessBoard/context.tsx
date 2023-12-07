@@ -55,6 +55,7 @@ export const ChessBoardContextProvider = ({
 }: Props) => {
   const [, setBooleanValue] = useState(false)
   const forceRerender = () => setBooleanValue((prev) => !prev)
+  const [undoneMoves, setUndoneMoves] = useState<Move[]>([])
   const [pieceIdMap, setPieceIdMap] = useState<PieceIdMap>({})
   const [chess, setChess] = useState(() => {
     return getInitialChessboard(pgnString)
@@ -153,7 +154,41 @@ export const ChessBoardContextProvider = ({
         pieceIdMap
       }}
     >
-      {children}
+      <div
+        onKeyDown={(e) => {
+          if (e.code === 'ArrowRight') {
+            try {
+              const undoneMove = undoneMoves.pop()
+
+              if (undoneMove) {
+                movePiece(undoneMove.from, undoneMove.to)
+              }
+              forceRerender()
+            } catch {}
+          } else if (e.code === 'ArrowLeft') {
+            try {
+              const move = chess.undo()
+
+              if (move) {
+                setUndoneMoves((prev) => [...prev, move])
+                setPieceIdMap((prev) => {
+                  const newMap = { ...prev }
+                  delete newMap[move.to]
+
+                  return {
+                    ...newMap,
+                    [move.from]: prev[move.to]
+                  }
+                })
+              }
+
+              forceRerender()
+            } catch {}
+          }
+        }}
+      >
+        {children}
+      </div>
 
       <div className={cx('border border-gray-500 bg-gray-200 p-4 rounded-md')}>
         <pre className={cx('break-words')}>
