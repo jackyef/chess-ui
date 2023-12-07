@@ -5,6 +5,7 @@ import {
   DEFAULT_BOARD_INITIAL_STATE,
   PieceColor
 } from './constants'
+import { calculateValidMoves } from './helpers'
 
 type ChessBoardContextType = {
   boardState: BoardState
@@ -12,6 +13,7 @@ type ChessBoardContextType = {
   movePiece: (from: Coordinate, to: Coordinate) => void
   selectedSquare: Coordinate | null
   setSelectedSquare: (coordinate: Coordinate | null) => void
+  squaresWithValidMove: Coordinate[]
 }
 
 const ChessBoardContext = createContext<ChessBoardContextType>({
@@ -19,7 +21,8 @@ const ChessBoardContext = createContext<ChessBoardContextType>({
   toMove: 'white',
   movePiece: () => {},
   selectedSquare: null,
-  setSelectedSquare: () => {}
+  setSelectedSquare: () => {},
+  squaresWithValidMove: []
 })
 
 export const useChessBoardContext = () => {
@@ -52,6 +55,12 @@ export const ChessBoardContextProvider = ({
 
   const toMove = boardState.turnCount % 2 === 0 ? 'white' : 'black'
 
+  const squaresWithValidMove = (() => {
+    if (!selectedSquare) return []
+
+    return calculateValidMoves(boardState, selectedSquare)
+  })()
+
   const movePiece = (from: Coordinate, to: Coordinate) => {
     const piece = boardState[from]
 
@@ -72,6 +81,8 @@ export const ChessBoardContextProvider = ({
     })
   }
 
+  console.log({ selectedSquare, squaresWithValidMove })
+
   return (
     <ChessBoardContext.Provider
       value={{
@@ -79,7 +90,8 @@ export const ChessBoardContextProvider = ({
         movePiece,
         toMove,
         selectedSquare,
-        setSelectedSquare
+        setSelectedSquare,
+        squaresWithValidMove
       }}
     >
       {children}
