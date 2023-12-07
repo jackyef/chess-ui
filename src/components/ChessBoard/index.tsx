@@ -1,7 +1,7 @@
-'use client';
+'use client'
 
-import { Board } from "./Board";
-import { ChessBoardContextProvider } from "./context"
+import { Board } from './Board'
+import { ChessBoardContextProvider } from './context'
 
 export const ChessBoard = () => {
   return (

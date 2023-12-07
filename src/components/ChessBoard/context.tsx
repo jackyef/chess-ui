@@ -1,18 +1,22 @@
-import React, { createContext, useContext, useState } from "react";
-import { BoardState, Coordinate, DEFAULT_BOARD_INITIAL_STATE } from "./constants";
+import React, { createContext, useContext, useState } from 'react'
+import {
+  BoardState,
+  Coordinate,
+  DEFAULT_BOARD_INITIAL_STATE
+} from './constants'
 
 type ChessBoardContextType = {
   boardState: BoardState
   movePiece: (from: Coordinate, to: Coordinate) => void
-};
+}
 
 const ChessBoardContext = createContext<ChessBoardContextType>({
   boardState: DEFAULT_BOARD_INITIAL_STATE,
   movePiece: () => {}
-});
+})
 
 export const useChessBoardContext = () => {
-  return useContext(ChessBoardContext);
+  return useContext(ChessBoardContext)
 }
 
 const getInitialBoardState = (boardStateSeed?: string): BoardState => {
@@ -26,11 +30,14 @@ const getInitialBoardState = (boardStateSeed?: string): BoardState => {
 
 type Props = {
   // A PGN string See: https://www.chess.com/terms/chess-pgn
-  boardStateSeed?: string 
+  boardStateSeed?: string
   children?: React.ReactNode
 }
 
-export const ChessBoardContextProvider = ({ boardStateSeed, children }: Props) => {
+export const ChessBoardContextProvider = ({
+  boardStateSeed,
+  children
+}: Props) => {
   const [boardState, setBoardState] = useState(() => {
     return getInitialBoardState(boardStateSeed)
   })
@@ -44,7 +51,7 @@ export const ChessBoardContextProvider = ({ boardStateSeed, children }: Props) =
     }
 
     // TODO: Do other checks
-    
+
     // Move the piece
     setBoardState((prevBoardState) => {
       const newBoardState = { ...prevBoardState }
