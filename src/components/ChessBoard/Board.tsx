@@ -82,7 +82,7 @@ export const Board = () => {
         </Button>
 
         <Button onClick={() => setShowAttackedSquare((prev) => !prev)}>
-          Toggle show attacked squares
+          {showAttackedSquare ? 'Hide' : 'Show'} attacked squares
         </Button>
 
         <Button onClick={() => reset()}>Reset</Button>
