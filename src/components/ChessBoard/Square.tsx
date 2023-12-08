@@ -72,16 +72,16 @@ export const Square = ({
         // Handling pesky rounded corners
         {
           'rounded-tl-lg': isBoardFlipped
-            ? coordinate === 'a1'
+            ? coordinate === 'h1'
             : coordinate === 'a8',
           'rounded-tr-lg': isBoardFlipped
-            ? coordinate === 'h1'
+            ? coordinate === 'a1'
             : coordinate === 'h8',
           'rounded-bl-lg': isBoardFlipped
-            ? coordinate === 'a8'
+            ? coordinate === 'h8'
             : coordinate === 'a1',
           'rounded-br-lg': isBoardFlipped
-            ? coordinate === 'h8'
+            ? coordinate === 'a8'
             : coordinate === 'h1'
         }
       )}

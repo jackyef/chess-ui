@@ -27,7 +27,13 @@ export const Board = () => {
       >
         <AnimatePresence>
           {ROWS.map((row) => (
-            <div key={row} className={cx('flex flex-row w-full')}>
+            <div
+              key={row}
+              className={cx('flex w-full', {
+                'flex-row-reverse': isBoardFlipped,
+                'flex-row': !isBoardFlipped // White is at bottom
+              })}
+            >
               {COLUMNS.map((column) => {
                 const coordinate = `${column}${row}` as Coordinate
                 const piece = chess.get(coordinate)
