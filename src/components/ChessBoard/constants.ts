@@ -6,7 +6,8 @@ export const COLUMNS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] as const
 export type Rows = (typeof ROWS)[number]
 export type Columns = (typeof COLUMNS)[number]
 
-export type PieceId = `${Color}_${PieceSymbol}_${Square}`
+export type PieceWithColor = `${Color}_${PieceSymbol}`
+export type PieceId = `${PieceWithColor}_${number}`
 
 // Map to keep track of square with pieces
 export type PieceIdMap = Partial<Record<Square, PieceId>>

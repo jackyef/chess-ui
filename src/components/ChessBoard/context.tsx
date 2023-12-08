@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { cx } from '~/utils/styles'
 import { Chess, Color, Move, SQUARES, Square } from 'chess.js'
-import { PieceIdMap } from './constants'
+import { PieceIdMap, PieceWithColor } from './constants'
+import { Button } from '../Button'
 
 type ChessBoardContextType = {
   chess: Chess
@@ -63,45 +64,123 @@ export const ChessBoardContextProvider = ({
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null)
   let selectedPiece = null
 
-  useEffect(() => {
-    // Construct initial pieceIdMap
-    SQUARES.forEach((square) => {
-      try {
-        const piece = chess.get(square)
-        if (piece) {
-          setPieceIdMap((prev) => ({
-            ...prev,
-            [square]: `${piece.color}_${piece.type}_${square}`
-          }))
-        }
-      } catch {}
-    })
-  }, [chess])
-
   try {
     selectedPiece = chess.get(selectedSquare!)
   } catch {}
 
-  const movePiece = (from: Square, to: Square) => {
+  useEffect(() => {
+    // Construct initial pieceIdMap
+    const pieceIdMap: PieceIdMap = {}
+    const seenPieces: Partial<Record<PieceWithColor, number>> = {}
+
+    SQUARES.forEach((square) => {
+      try {
+        const piece = chess.get(square)
+        if (piece) {
+          const piecePrefix = `${piece.color}_${piece.type}` as PieceWithColor
+          seenPieces[piecePrefix] = (seenPieces[piecePrefix] ?? 0) + 1
+
+          pieceIdMap[square] = `${piecePrefix}_${
+            seenPieces[piecePrefix] as number
+          }`
+        }
+      } catch {}
+    })
+
+    setPieceIdMap(pieceIdMap)
+  }, [chess])
+
+  const undoMove = () => {
+    const move = chess.undo()
+
+    if (!move) return
+
+    setUndoneMoves((prev) => [...prev, move])
+    setPieceIdMap((prev) => {
+      const newMap = { ...prev }
+
+      if (move.captured) {
+        const piece = chess.get(move.to)
+        const piecePrefix = `${piece.color}_${piece.type}` as PieceWithColor
+        const currentNumberOfSamePieceOnTheBoard = (() => {
+          let count = 0
+          SQUARES.forEach((square) => {
+            try {
+              const piece = chess.get(square)
+              if (piece) {
+                const prefix = `${piece.color}_${piece.type}` as PieceWithColor
+
+                if (piecePrefix === prefix) {
+                  count += 1
+                }
+              }
+            } catch {}
+          })
+
+          return count
+        })()
+
+        if (piece) {
+          newMap[move.to] = `${piece.color}_${piece.type}_${
+            currentNumberOfSamePieceOnTheBoard + 1
+          }`
+        } else {
+          delete newMap[move.to]
+        }
+      } else if (move.san === 'O-O') {
+        // Castle kingside
+        // We need to update rook position too
+        const square = move.color === 'w' ? 'f1' : 'f8'
+        const targetSquare = move.color === 'w' ? 'h1' : 'h8'
+        const rook = chess.get(targetSquare)
+
+        if (rook) {
+          const pieceId = pieceIdMap[square]
+          newMap[targetSquare] = pieceId
+        }
+      } else if (move.san === 'O-O-O') {
+        // Castle queenside
+        // We need to update rook position too
+        const square = move.color === 'w' ? 'd1' : 'd8'
+        const targetSquare = move.color === 'w' ? 'a1' : 'a8'
+        const rook = chess.get(targetSquare)
+
+        if (rook) {
+          const pieceId = pieceIdMap[square]
+          newMap[targetSquare] = pieceId
+        }
+      } else {
+        delete newMap[move.to]
+      }
+
+      return {
+        ...newMap,
+        [move.from]: prev[move.to]
+      }
+    })
+  }
+  const movePiece = (
+    from: Square,
+    to: Square,
+    shouldClearUndoneMoves = true
+  ) => {
     if (chess.isGameOver()) return
 
-    let hasMovedSuccessfully = false
+    let move: Move | null = null
     // Do move
     try {
-      chess.move({ from, to })
-      hasMovedSuccessfully = true
+      move = chess.move({ from, to })
     } catch {}
 
-    if (!hasMovedSuccessfully) {
+    if (!move) {
       // TODO: Show UI to pick promotion.
       // For now just auto-promote to queen
       try {
-        chess.move({ from, to, promotion: 'q' })
-        hasMovedSuccessfully = true
+        move = chess.move({ from, to, promotion: 'q' })
       } catch {}
     }
 
-    if (!hasMovedSuccessfully) {
+    if (!move) {
       // TODO: Show toast error
       // Show toast if invalid move
     }
@@ -112,6 +191,32 @@ export const ChessBoardContextProvider = ({
         const newMap = { ...prev }
         delete newMap[from]
 
+        if (!move) return newMap
+
+        if (move.san === 'O-O') {
+          // Castle kingside
+          // We need to update rook position too
+          const square = move.color === 'w' ? 'h1' : 'h8'
+          const targetSquare = move.color === 'w' ? 'f1' : 'f8'
+          const rook = chess.get(targetSquare)
+
+          if (rook) {
+            const pieceId = prev[square]
+            newMap[targetSquare] = pieceId
+          }
+        } else if (move.san === 'O-O-O') {
+          // Castle queenside
+          // We need to update rook position too
+          const square = move.color === 'w' ? 'a1' : 'a8'
+          const targetSquare = move.color === 'w' ? 'd1' : 'd8'
+          const rook = chess.get(targetSquare)
+
+          if (rook) {
+            const pieceId = prev[square]
+            newMap[targetSquare] = pieceId
+          }
+        }
+
         return {
           ...newMap,
           [to]: prev[from]
@@ -119,8 +224,12 @@ export const ChessBoardContextProvider = ({
       })
     }
 
-    // Check if game is over
+    // Clear undone moves.
+    if (shouldClearUndoneMoves) {
+      setUndoneMoves([])
+    }
 
+    // TODO: Check if game is over
     setSelectedSquare(null)
     forceRerender()
   }
@@ -161,28 +270,12 @@ export const ChessBoardContextProvider = ({
               const undoneMove = undoneMoves.pop()
 
               if (undoneMove) {
-                movePiece(undoneMove.from, undoneMove.to)
+                movePiece(undoneMove.from, undoneMove.to, false)
               }
-              forceRerender()
             } catch {}
           } else if (e.code === 'ArrowLeft') {
             try {
-              const move = chess.undo()
-
-              if (move) {
-                setUndoneMoves((prev) => [...prev, move])
-                setPieceIdMap((prev) => {
-                  const newMap = { ...prev }
-                  delete newMap[move.to]
-
-                  return {
-                    ...newMap,
-                    [move.from]: prev[move.to]
-                  }
-                })
-              }
-
-              forceRerender()
+              undoMove()
             } catch {}
           }
         }}
@@ -190,10 +283,30 @@ export const ChessBoardContextProvider = ({
         {children}
       </div>
 
-      <div className={cx('border border-gray-500 bg-gray-200 p-4 rounded-md')}>
-        <pre className={cx('break-words')}>
-          {chess.pgn({ maxWidth: 50, newline: '\n' })}
-        </pre>
+      <div className={cx('border border-gray-500 bg-gray-100 p-4 rounded-md')}>
+        {!lastMove && !undoneMoves.length ? (
+          <form
+            className={cx('w-full')}
+            onSubmit={(e) => {
+              e.preventDefault()
+              const formData = new FormData(e.target as HTMLFormElement)
+              const pgnString = formData.get('pgn') as string
+              setChess(getInitialChessboard(pgnString))
+            }}
+          >
+            <textarea
+              className="w-full bg-transparent font-mono"
+              name="pgn"
+              placeholder="Paste PGN here (optional)"
+            ></textarea>
+
+            <Button type="submit">Load PGN</Button>
+          </form>
+        ) : (
+          <pre className={cx('break-words')}>
+            {chess.pgn({ maxWidth: 50, newline: '\n' })}
+          </pre>
+        )}
       </div>
     </ChessBoardContext.Provider>
   )

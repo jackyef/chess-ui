@@ -6,6 +6,7 @@ import { Square as Coordinate } from 'chess.js'
 import { Square } from './Square'
 import { useChessBoardContext } from './context'
 import { Piece } from './Piece'
+import { Button } from '../Button'
 
 export const Board = () => {
   const { chess, pieceIdMap, reset } = useChessBoardContext()
@@ -47,6 +48,7 @@ export const Board = () => {
                     {hasPiece && (
                       <motion.div
                         key={pieceIdMap[coordinate]}
+                        data-testid={coordinate}
                         className={cx(
                           'absolute inset-0 z-50 pointer-events-none'
                         )}
@@ -75,32 +77,15 @@ export const Board = () => {
       </div>
 
       <div className={cx('flex my-4 justify-end gap-2')}>
-        <button
-          className={cx(
-            'px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-600 text-white'
-          )}
-          onClick={() => setIsBoardFlipped((prev) => !prev)}
-        >
+        <Button onClick={() => setIsBoardFlipped((prev) => !prev)}>
           Flip board
-        </button>
+        </Button>
 
-        <button
-          className={cx(
-            'px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-600 text-white'
-          )}
-          onClick={() => setShowAttackedSquare((prev) => !prev)}
-        >
+        <Button onClick={() => setShowAttackedSquare((prev) => !prev)}>
           Toggle show attacked squares
-        </button>
+        </Button>
 
-        <button
-          className={cx(
-            'px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-600 text-white'
-          )}
-          onClick={() => reset()}
-        >
-          Reset
-        </button>
+        <Button onClick={() => reset()}>Reset</Button>
       </div>
     </div>
   )
